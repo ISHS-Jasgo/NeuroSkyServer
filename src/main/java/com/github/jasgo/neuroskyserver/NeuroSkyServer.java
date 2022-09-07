@@ -1,5 +1,6 @@
 package com.github.jasgo.neuroskyserver;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -33,22 +34,34 @@ public class NeuroSkyServer extends Thread{
     }
 
     public static class ListeningThread extends Thread {
+
+        JSONArray array = new JSONArray();
         @Override
         public void run() {
             try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 String readValue;
+                int savedData = 0;
                 while ((readValue = reader.readLine()) != null) {
                     System.out.println(readValue);
-
+                    if (parseToJSON(readValue) != null) {
+                        array.add(parseToJSON(readValue));
+                        System.out.println("Data Saved : " + ++savedData);
+                    }
                 }
             } catch (IOException e) {
+                DataBase db = new DataBase("테스트.xlsx");
+                db.saveData(array);
                 System.out.println("사용자와 연결이 종료되었습니다.");
             }
         }
     }
-    public static JSONObject parseToJSON(String s) throws ParseException {
+    public static JSONObject parseToJSON(String s) {
         JSONParser parser = new JSONParser();
-        return (JSONObject) parser.parse(s);
+        JSONObject obj = null;
+        try {
+            obj = (JSONObject) parser.parse(s);
+        } catch (ParseException ignored) {}
+        return obj != null ? (obj.containsKey("eegPower") ? obj : null) : null;
     }
 }
